@@ -66,6 +66,13 @@
  * - emulatorOpts    | String       | Empty
  * - ctsTests        | String Array | Empty
  * - skipStages      | Maps         | all values are false
+ * - mailTo          | String       | If any stage failure occurs, it sends
+                     |              | an email to the given addresses (separated
+                     |              | with a space character); if `mailTo` is not
+                     |              | set, it will not send a mail
+                     |              |
+ * - mailCc          | String       | Can be used in conjunction with the
+ *                   |              | `mailTo` option
  *
  * `skipStages` Maps has the following keys:
  *
@@ -421,6 +428,15 @@ def call(body)
                         echo "Emulator stage has failed !"
                         echo "Emulator logs: ${LOG_EMULATOR}"
                         echo "Emulator error logs: ${ERR_EMULATOR}"
+                    }
+
+                    if (args.mailTo) {
+                        mail (
+                            to: args.mailTo,
+                            cc: args.mailCc,
+                            subject: "[${JOB_NAME}:${BUILD_NUMBER}] - failure",
+                            body: "Build URL: ${BUILD_URL}"
+                        )
                     }
                 }
             }
