@@ -1,0 +1,39 @@
+#!/usr/bin/groovy
+
+library identifier: '@test', retriever: modernSCM([
+    $class: 'GitSCMSource',
+    credentialsId: '<private-key-id>',
+    remote: 'git@git.smile.fr:ecs-ci/jenkins-pipeline-aosp.git',
+])
+
+def skip = [
+    scm           : false,
+    build         : false,
+    emulator      : false,
+    statictests   : false,
+    unittests     : false,
+    sonarqube     : false,
+    artefacts     : true
+]
+
+aospPipeline {
+    doClean         = true
+    manifestUrl     = '<git@git.domain.com:user/repository-name>'
+    repoBranch      = '<repo-branch-name>'
+    targetProduct   = 'aosp_x86_64'
+    buildVariant    = 'eng'
+    ccacheEnabled   = true
+    ccacheSize      = '50G'
+    jobCpus         = 4
+    logcatEnabled   = false
+    emulatorEnabled = true
+    emulatorOpts    = [
+    "-memory 1024",
+    "-accel on",
+    "-no-snapshot",
+    "-timezone Europe/Paris"
+    ]
+    ctsTests        = [ "<test_1>", "<test_2>" ]
+    skipStages      = skip
+    mailTo          = "<firstname.lastname@domain.com>"
+}
