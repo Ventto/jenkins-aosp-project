@@ -3,6 +3,29 @@ Jenkins Pipeline for AOSP
 
 *"This repository is a [Jenkins shared library](https://jenkins.io/doc/book/pipeline/shared-libraries/#dynamic-retrieval)"*
 
+# Requirements
+
+## System Packages
+
+The following packages must be installed on the system on which the pipepline
+will run (the Jenkins master or any slave):
+
+* *bash*
+* *git*
+* *nohup*
+* *repo*
+
+## Jenkins Plugins
+
+This is the list of plugin's shortnames:
+
+* *[build-timeout](https://plugins.jenkins.io/build-timeout)*
+* *[sonar](https://plugins.jenkins.io/sonar)*
+* *[timestamper](https://plugins.jenkins.io/timestamper)*
+* *[warnings](https://plugins.jenkins.io/warnings)*
+* *[workflow-aggregator](https://plugins.jenkins.io/workflow-aggregator)*
+* *[ws-cleanup](https://plugins.jenkins.io/ws-cleanup)*
+
 # How to use it ?
 
 Importing and using this pipeline (or shared library) can be performed from
