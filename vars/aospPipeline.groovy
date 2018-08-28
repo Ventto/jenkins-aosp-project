@@ -218,7 +218,7 @@ def call(body)
             stage('Preparation') {
                 steps {
                     script { if (args.doClean) { cleanWs() } }
-                    sh "mkdir -p ${LOG_DIR} ${args.aospDir} ci_out"
+                    sh "mkdir -p '${LOG_DIR}' '${args.aospDir}' 'ci_out'"
                     script {
                         if (!skipStages.sonar) {
                             sh "mkdir -p ci_config"
@@ -241,7 +241,7 @@ def call(body)
                             [ -d .repo ] && exit 0
                             repo init -u "${args.manifestUrl}" ${args.repoBranch}
                         """
-                        sh "repo sync -j${args.jobCpus} 2> '${LOG_DIR}/repo.log'"
+                        sh "repo sync -j${args.jobCpus} 1>'${LOG_DIR}/repo.log' 2>&1"
                     }
                 }
             }
@@ -297,7 +297,7 @@ def call(body)
                                     ${SETENV}
                                     nohup emulator -no-window ${emulatorOpts} \
                                                    -port ${args.emulatorPort} &
-                                } > ${LOG_EMULATOR} 2>${ERR_EMULATOR}
+                                } > "${LOG_EMULATOR}" 2>"${ERR_EMULATOR}"
                                 echo "\$!"
                             """).trim()
                         }
@@ -326,7 +326,7 @@ def call(body)
                                 {   cd aosp
                                     ${SETENV}
                                     nohup ${ADB_BIN} logcat &
-                                } > ${LOG_LOGCAT} 2>${ERR_LOGCAT} &
+                                } > "${LOG_LOGCAT}" 2>"${ERR_LOGCAT}" &
                                 echo "\$!"
                             """).trim()
                             sh "ps -p ${logcatPid}"
