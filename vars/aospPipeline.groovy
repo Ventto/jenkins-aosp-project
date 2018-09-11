@@ -241,7 +241,10 @@ def call(body)
                             [ -d .repo ] && exit 0
                             repo init -u "${args.manifestUrl}" ${args.repoBranch}
                         """
-                        sh "repo sync -j${args.jobCpus} 1>'${LOG_DIR}/repo.log' 2>&1"
+                        retry(5) {
+                            sh "repo sync -j${args.jobCpus} 1>'${LOG_DIR}/repo.log' 2>&1"
+                            sleep time: 10, unit: "MINUTES"
+                        }
                     }
                 }
             }
