@@ -219,18 +219,6 @@ def call(body)
                 steps {
                     script { if (args.doClean) { cleanWs() } }
                     sh "mkdir -p '${LOG_DIR}' '${args.aospDir}' 'ci_out'"
-                    script {
-                        if (!skipStages.sonar) {
-                            sh "mkdir -p ci_config"
-                            dir('ci_config') {
-                                git (
-                                    branch: 'master',
-                                    credentialsId: '42158f2d-b65b-4ade-b0cd-a9500ec7e446',
-                                    url: 'git@git.smile.fr:thven/pocm-ci.git'
-                                )
-                            }
-                        }
-                    }
                 }
             }
             stage('SCM') {
