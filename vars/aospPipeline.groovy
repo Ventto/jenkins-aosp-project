@@ -131,14 +131,13 @@ def call(body)
     args.emulatorPort = (args.emulatorPort) ? args.emulatorPort : 5566
 
     def skipStages = [
-        download     : false,
+        scm          : false,
         build        : false,
         emulator     : false,
         unittests    : false,
         statictests  : false,
-        sonar        : false,
+        sonarqube    : false,
         artefacts    : false,
-        eDownload    : false
     ]
 
     emulatorOpts = (args.emulatorOpts) ? args.emulatorOpts.join(' ') : ""
