@@ -236,14 +236,17 @@ def call(body)
             stage('SCM') {
                 when { expression { ! skipStages.scm } }
                 steps {
-                    dir(args.aospDir) {
-                        sh """
-                            [ -d .repo ] && exit 0
-                            repo init -u "${args.manifestUrl}" ${args.repoBranch}
-                        """
-                        retry(5) {
-                            sh "repo sync -j${args.jobCpus} 1>'${LOG_DIR}/repo.log' 2>&1"
-                            sleep time: 10, unit: "MINUTES"
+                    withEnv(["PATH+=${tool 'repo'}"]) {
+                        dir(args.aospDir) {
+                            sh """
+                                [ -d .repo ] && exit 0
+                                repo init -u "${args.manifestUrl}" ${args.repoBranch}
+                            """
+
+                            retry(5) {
+                                sh "repo sync -j${args.jobCpus} 1>'${LOG_DIR}/repo.log' 2>&1"
+                                sleep time: 10, unit: "MINUTES"
+                            }
                         }
                     }
                 }
@@ -449,4 +452,15 @@ def call(body)
             }
         } /* END OF STAGES */
     } /* END OF PIPELINE */
+}
+
+def tool(String type) {
+    // FIXME: Implement *repo* installer
+    if (type == "repo") {
+        sh """ mkdir -p "${WORKSPACE}/bin" """
+        sh """ curl https://storage.googleapis.com/git-repo-downloads/repo > "${WORKSPACE}/bin/repo" """
+        sh """ chmod a+x "${WORKSPACE}/bin/repo" """
+        return "${WORKSPACE}/bin"
+    }
+    return steps.tool(type)
 }
