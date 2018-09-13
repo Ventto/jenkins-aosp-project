@@ -109,7 +109,7 @@ def call(body)
 
     if (args.skipStages && !args.skipStages.sonarqube && !args.sonarSettings) {
         currentBuild.result = 'ABORTED'
-        error("${currentBuild.result}: 'sonarSetting' parameter is not set")
+        error("${currentBuild.result}: either 'sonarSetting' parameter must be set or skip 'sonarqube' step")
     }
 
     /* Set the workspace's subdirectory where the AOSP sources are */
