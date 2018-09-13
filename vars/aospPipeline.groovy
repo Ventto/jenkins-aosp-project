@@ -236,7 +236,6 @@ def call(body)
 
                             retry(5) {
                                 sh "repo sync -j${args.jobCpus} 1>'${LOG_DIR}/repo.log' 2>&1"
-                                sleep time: 10, unit: "MINUTES"
                             }
                         }
                     }
