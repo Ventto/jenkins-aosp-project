@@ -107,6 +107,11 @@ def call(body)
         error("${currentBuild.result}: missing arguments")
     }
 
+    if (args.skipStages && !args.skipStages.sonarqube && !args.sonarSettings) {
+        currentBuild.result = 'ABORTED'
+        error("${currentBuild.result}: 'sonarSetting' parameter is not set")
+    }
+
     /* Set the workspace's subdirectory where the AOSP sources are */
     args.buildVariant = (args.buildVariant) ? args.buildVariant : "eng"
     args.aospDir = (args.aospDir) ? args.aospDir : "aosp"
@@ -210,7 +215,6 @@ def call(body)
              * a first time (1: enable, 0: disable).
              */
             USE_CCACHE           = "${use_ccache}"
-            SONAR_SCANNER_HOME   = "\${HOME}/sonar-scanner"
         }
 
         stages {
@@ -373,7 +377,7 @@ def call(body)
                 }
             }
             stage('Sonarqube') {
-                when { expression { ! skipStages.sonar } }
+                when { expression { ! skipStages.sonarqube } }
                 steps {
                     echo 'Sonar !'
                     script {
@@ -383,10 +387,9 @@ def call(body)
                          * located at https://git.smile.fr/thven/pocm-ci.
                          */
                         withSonarQubeEnv('SonarServer') {
-                            sh """
-                                ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
-                                    -D project.settings="ci_config/sonar-project.properties"
-                            """
+                            withEnv(["PATH+=${tool 'SonarScanner'}/bin"]) {
+                                sh "sonar-scanner -D project.settings=\"${args.sonarSettings}\" "
+                            }
                         }
                     }
                 }
