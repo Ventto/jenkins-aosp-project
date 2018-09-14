@@ -270,71 +270,60 @@ def call(body)
                     }
                 }
             }
-            /*
-             * FIXME: Only one Android emulator process can run on the slave.
-             * Waiting-for-boot step is waiting for the OS to completely boot
-             * on a a given emulator. If it is already done for a second
-             * process then the stage will run as long as that process is
-             * running.
-             */
-            stage('Emulator') {
-                when {
-                    expression {
-                        (! skipStages.emulator) && args.emulatorEnabled
-                    }
-                }
-                steps {
-                    script {
-                        lastStageName = "Emulator"
-                        echo "Starting emulator..."
-
-                        withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
-                            emulatorPid = sh(returnStdout: true, script: """
-                                {   cd aosp
-                                    ${SETENV}
-                                    nohup emulator -no-window ${emulatorOpts} \
-                                                   -port ${args.emulatorPort} &
-                                } > "${LOG_EMULATOR}" 2>"${ERR_EMULATOR}"
-                                echo "\$!"
-                            """).trim()
-                        }
-                    }
-
-                    echo "Waiting for OS to completely boot..."
-
-                    dir(args.aospDir) {
-                        sh """
-                            ${SETENV}
-                            ps -p "${emulatorPid}" || exit 1
-                            CMD="${ADB_BIN} wait-for-device \
-                                        shell getprop init.svc.bootanim"
-                            until \$CMD | grep -m 1 stopped; do sleep 2; done
-                        """
-                    }
-
-                    echo "Clear and capture logcat"
-
-                    script {
-                        if (args.logcatEnabled) {
-                            dir(args.aospDir) {
-                                sh "${SETENV} ${ADB_BIN} logcat -c"
-                            }
-                            logcatPid = sh(returnStdout: true, script: """
-                                {   cd aosp
-                                    ${SETENV}
-                                    nohup ${ADB_BIN} logcat &
-                                } > "${LOG_LOGCAT}" 2>"${ERR_LOGCAT}" &
-                                echo "\$!"
-                            """).trim()
-                            sh "ps -p ${logcatPid}"
-                        }
-                    }
-                }
-            }
             stage('Unit Tests') {
                 when { expression { ! skipStages.unittests } }
                 steps {
+                    /*
+                     * FIXME: Only one Android emulator process can run on the slave.
+                     * Waiting-for-boot step is waiting for the OS to completely boot
+                     * on a a given emulator. If it is already done for a second
+                     * process then the stage will run as long as that process is
+                     * running.
+                     */
                     script {
+                        if (args.emulatorEnabled) {
+                            lastStageName = "Emulator"
+                            echo "Starting emulator..."
+
+                            withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
+                                emulatorPid = sh(returnStdout: true, script: """
+                                    {   cd aosp
+                                        ${SETENV}
+                                        nohup emulator -no-window ${emulatorOpts} \
+                                                       -port ${args.emulatorPort} &
+                                    } > "${LOG_EMULATOR}" 2>"${ERR_EMULATOR}"
+                                    echo "\$!"
+                                """).trim()
+                            }
+
+                            echo "Waiting for OS to completely boot..."
+
+                            dir(args.aospDir) {
+                                sh "ps -p '${emulatorPid}'"
+                                sh """
+                                    ${SETENV}
+                                    CMD="${ADB_BIN} wait-for-device \
+                                                shell getprop init.svc.bootanim"
+                                    until \$CMD | grep -m 1 stopped; do sleep 2; done
+                                """
+                            }
+
+                            echo "Clear and capture logcat"
+
+                            if (args.logcatEnabled) {
+                                dir(args.aospDir) {
+                                    sh "${SETENV} ${ADB_BIN} logcat -c"
+                                }
+                                logcatPid = sh(returnStdout: true, script: """
+                                    {   cd aosp
+                                        ${SETENV}
+                                        nohup ${ADB_BIN} logcat &
+                                    } > "${LOG_LOGCAT}" 2>"${ERR_LOGCAT}" &
+                                    echo "\$!"
+                                """).trim()
+                                sh "ps -p ${logcatPid}"
+                            }
+                        } /* EMULATOR */
                         dir(args.aospDir) {
                             if (args.ctsTests.size() > 0) {
                                 args.ctsTests.each {
@@ -346,8 +335,8 @@ def call(body)
                                 }
                             }
                         }
-                    }
-                }
+                    } /* SCRIPT */
+                } /* STEPS */
             }
             stage('Static Analysis') {
                 when { expression { ! skipStages.statictests } }
