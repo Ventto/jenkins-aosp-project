@@ -218,15 +218,16 @@ def call(body)
         }
 
         stages {
-            stage('Preparation') {
+            stage('Pre Actions') {
                 steps {
                     script { if (args.doClean) { cleanWs() } }
-                    sh "mkdir -p '${LOG_DIR}' '${args.aospDir}' 'ci_out'"
+                    sh """ mkdir -p "${LOG_DIR}" "${args.aospDir}" """
                 }
             }
             stage('SCM') {
                 when { expression { ! skipStages.scm } }
                 steps {
+
                     withEnv(["PATH+=${tool 'repo'}"]) {
                         dir(args.aospDir) {
                             sh """
