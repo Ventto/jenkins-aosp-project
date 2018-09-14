@@ -62,7 +62,6 @@
  * - ccacheSize      | String       | "50G"
  * - logcatEnabled   | Boolean      | false
  * - emulatorEnabled | Boolean      | false
- * - emulatorPort    | Integer      | 5566
  * - emulatorOpts    | String       | Empty
  * - ctsTests        | String Array | Empty
  * - skipStages      | Maps         | all values are false
@@ -121,7 +120,6 @@ def call(body)
     args.ccacheEnabled = (args.ccacheEnabled) ? args.ccacheEnabled : false
     args.ccacheSize = (args.ccacheSize) ? args.ccacheSize : "50G"
     args.logcatEnabled = (args.logcatEnabled) ? args.logcatEnabled : false
-    args.emulatorEnabled = (args.emulatorEnabled) ? args.emulatorEnabled : false
     args.ctsTests = (args.ctsTests) ? args.ctsTests : []
 
     /* A virtual device normally occupies a pair of adjacent ports:
@@ -133,7 +131,9 @@ def call(body)
      * concurrent virtual devices.
      * Default port: 5566/5567
      */
-    args.emulatorPort = (args.emulatorPort) ? args.emulatorPort : 5566
+    def emulatorOpts = "-no-window -memory 1024 -accel on -no-snapshot -port 5566"
+    args.emulatorOpts = (args.emulatorOpts) ? args.emulatorOpts.join(' ') : emulatorOpts
+    args.emulatorEnabled = (args.emulatorEnabled) ? args.emulatorEnabled : false
 
     def skipStages = [
         scm          : false,
@@ -145,7 +145,6 @@ def call(body)
         artefacts    : false,
     ]
 
-    emulatorOpts = (args.emulatorOpts) ? args.emulatorOpts.join(' ') : ""
     skipStages = (args.skipStages) ? args.skipStages : skipStages
 
     /* Set the `USE_CCACHE` environment variable to enable building cache */
@@ -284,43 +283,38 @@ def call(body)
                         if (args.emulatorEnabled) {
                             echo "Starting emulator..."
 
-                            withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
-                                emulatorPid = sh(returnStdout: true, script: """
-                                    {   cd aosp
-                                        ${SETENV}
-                                        nohup emulator -no-window ${emulatorOpts} \
-                                                       -port ${args.emulatorPort} &
-                                    } > "${LOG_EMULATOR}" 2>"${ERR_EMULATOR}"
-                                    echo "\$!"
-                                """).trim()
-                            }
-
-                            echo "Waiting for OS to completely boot..."
-
                             dir(args.aospDir) {
+                                withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
+                                    emulatorPid = steps.sh(returnStdout: true, script: """
+                                    { ${SETENV}
+                                      nohup emulator ${args.emulatorOpts} &
+                                    } > "${LOG_EMULATOR}" 2>"${ERR_EMULATOR}"
+                                    echo "\$!" """).trim()
+                                }
+
                                 sh "ps -p '${emulatorPid}'"
+
+                                echo "Waiting for OS to completely boot..."
+
                                 sh """
                                     ${SETENV}
                                     CMD="${ADB_BIN} wait-for-device \
                                                 shell getprop init.svc.bootanim"
                                     until \$CMD | grep -m 1 stopped; do sleep 2; done
                                 """
-                            }
 
-                            echo "Clear and capture logcat"
+                                echo "Clear and capture logcat"
 
-                            if (args.logcatEnabled) {
-                                dir(args.aospDir) {
+                                if (args.logcatEnabled) {
                                     sh "${SETENV} ${ADB_BIN} logcat -c"
+                                    logcatPid = sh(returnStdout: true, script: """
+                                        { ${SETENV}
+                                          nohup ${ADB_BIN} logcat & } \
+                                            > "${LOG_LOGCAT}" 2>"${ERR_LOGCAT}" &
+                                        echo "\$!"
+                                    """).trim()
+                                    sh "ps -p ${logcatPid}"
                                 }
-                                logcatPid = sh(returnStdout: true, script: """
-                                    {   cd aosp
-                                        ${SETENV}
-                                        nohup ${ADB_BIN} logcat &
-                                    } > "${LOG_LOGCAT}" 2>"${ERR_LOGCAT}" &
-                                    echo "\$!"
-                                """).trim()
-                                sh "ps -p ${logcatPid}"
                             }
                         } /* EMULATOR */
                         dir(args.aospDir) {
