@@ -282,7 +282,6 @@ def call(body)
                      */
                     script {
                         if (args.emulatorEnabled) {
-                            lastStageName = "Emulator"
                             echo "Starting emulator..."
 
                             withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
@@ -386,6 +385,7 @@ def call(body)
         } /* END OF STAGES */
         post {
             always {
+                // TODO: Save all logs and ci resulting files
                 script {
                     if (logcatPid) {
                         echo "Killing logcat..."
@@ -408,17 +408,12 @@ def call(body)
                         /* Do nothing */
                     }
                 }
-                // TODO: Save all logs and ci resulting files
+                echo "Log files:"
+                sh "ls ${LOG_DIR}"
             }
             failure {
                 echo "Post Stages: failure"
                 script {
-                    if (lastStageName == "Emulator") {
-                        echo "Emulator stage has failed !"
-                        echo "Emulator logs: ${LOG_EMULATOR}"
-                        echo "Emulator error logs: ${ERR_EMULATOR}"
-                    }
-
                     if (args.mailTo) {
                         mail (
                             to: args.mailTo,
