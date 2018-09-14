@@ -161,7 +161,8 @@ def call(body)
         set +x
         { . build/envsetup.sh && \
           lunch ${args.targetProduct}-${args.buildVariant}
-        } || exit 1
+        } >/dev/null 2>&1 || exit 1
+        echo "Sourcing Android environment..."
         set -x
     """
 
@@ -281,9 +282,10 @@ def call(body)
                      */
                     script {
                         if (args.emulatorEnabled) {
-                            echo "Starting emulator..."
-
                             dir(args.aospDir) {
+                                sh "${SETENV} adb start-server"
+
+                                echo "Starting emulator..."
                                 withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
                                     emulatorPid = steps.sh(returnStdout: true, script: """
                                     { ${SETENV}
@@ -296,20 +298,17 @@ def call(body)
 
                                 echo "Waiting for OS to completely boot..."
 
-                                sh """
-                                    ${SETENV}
-                                    CMD="${ADB_BIN} wait-for-device \
-                                                shell getprop init.svc.bootanim"
-                                    until \$CMD | grep -m 1 stopped; do sleep 2; done
-                                """
+                                timeout(5) {
+                                    sh "${SETENV} adb -e wait-for-device shell getprop init.svc.bootanim"
+                                }
 
                                 echo "Clear and capture logcat"
 
                                 if (args.logcatEnabled) {
-                                    sh "${SETENV} ${ADB_BIN} logcat -c"
+                                    sh "${SETENV} adb logcat -c"
                                     logcatPid = sh(returnStdout: true, script: """
                                         { ${SETENV}
-                                          nohup ${ADB_BIN} logcat & } \
+                                          nohup adb logcat & } \
                                             > "${LOG_LOGCAT}" 2>"${ERR_LOGCAT}" &
                                         echo "\$!"
                                     """).trim()
@@ -323,6 +322,7 @@ def call(body)
                                     echo "Running CTS: ${it}"
                                     sh """
                                         ${SETENV}
+                                        export ANDROID_SERIAL='emulator-5566'
                                         cts-tradefed run commandAndExit cts -m ${it}
                                     """
                                 }
