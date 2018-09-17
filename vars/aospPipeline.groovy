@@ -270,7 +270,34 @@ def call(body)
                     }
                 }
             }
-            stage('Unit Tests') {
+            stage('Static Analysis') {
+                when { expression { ! skipStages.statictests } }
+                steps {
+                    parallel(
+                        WarningsCheck: {
+                            warnings (
+                                canComputeNew: true,
+                                canResolveRelativePaths: true,
+                                categoriesPattern: '',
+                                consoleParsers: [
+                                    [parserName: 'GNU C Compiler 4 (gcc)'],
+                                    [parserName: 'Clang (LLVM based)'],
+                                    [parserName: 'GNU Make + GNU C Compiler (gcc)'],
+                                    [parserName: 'Java Compiler (javac)'],
+                                    [parserName: 'JavaDoc Tool']
+                                ],
+                                defaultEncoding: '',
+                                excludePattern: '',
+                                healthy: '',
+                                includePattern: '',
+                                messagesPattern: '',
+                                unHealthy: ''
+                            )
+                        }
+                    )
+                }
+            }
+            stage('Tests') {
                 when { expression { ! skipStages.unittests } }
                 steps {
                     /*
@@ -330,33 +357,6 @@ def call(body)
                         }
                     } /* SCRIPT */
                 } /* STEPS */
-            }
-            stage('Static Analysis') {
-                when { expression { ! skipStages.statictests } }
-                steps {
-                    parallel(
-                        WarningsCheck: {
-                            warnings (
-                                canComputeNew: true,
-                                canResolveRelativePaths: true,
-                                categoriesPattern: '',
-                                consoleParsers: [
-                                    [parserName: 'GNU C Compiler 4 (gcc)'],
-                                    [parserName: 'Clang (LLVM based)'],
-                                    [parserName: 'GNU Make + GNU C Compiler (gcc)'],
-                                    [parserName: 'Java Compiler (javac)'],
-                                    [parserName: 'JavaDoc Tool']
-                                ],
-                                defaultEncoding: '',
-                                excludePattern: '',
-                                healthy: '',
-                                includePattern: '',
-                                messagesPattern: '',
-                                unHealthy: ''
-                            )
-                        }
-                    )
-                }
             }
             stage('Sonarqube') {
                 when { expression { ! skipStages.sonarqube } }
