@@ -197,6 +197,10 @@ def call(body)
         }
 
         environment {
+            /* AOSP wrapper */
+            AOSP_ROOT         = "${args.aospDir}"
+            AOSP_TARGET_BUILD = "${args.targetProduct}-${args.buildVariant}"
+
             LOG_DIR      = "${WORKSPACE}/logs/${JOB_NAME}-${BUILD_NUMBER}"
             LOG_EMULATOR = "${LOG_DIR}/emulator.log"
             ERR_EMULATOR = "${LOG_DIR}/emulator-err.log"
@@ -420,6 +424,10 @@ def call(body)
             }
         } /* END OF STAGES */
     } /* END OF PIPELINE */
+}
+
+def sh(Map params = [:]) {
+    return steps.sh(params)
 }
 
 def tool(String type) {
