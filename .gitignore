@@ -1,12 +1,1 @@
 /*
-
-!README.md
-!.gitignore
-
-!samples/
-samples/*
-!samples/Jenkinsfile
-
-!vars/
-vars/*
-!vars/aospPipeline.groovy
