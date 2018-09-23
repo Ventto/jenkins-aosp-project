@@ -188,13 +188,7 @@ def call(body)
             ERR_EMULATOR = "${LOG_DIR}/emulator-err.log"
             LOG_LOGCAT   = "${LOG_DIR}/logcat.log"
             ERR_LOGCAT   = "${LOG_DIR}/logcat-err.log"
-            /*
-             * Android Environment Variables:
-             *
-             * - `ANDROID_SERIAL` represents the serial number to connect with
-             *   `adb` (without using -s option that overrides that variable).
-             */
-            ANDROID_SERIAL       = "emulator-${args.emulatorPort}"
+
             /*
              * Set `USE_CCACHE` for specifing to use the 'ccache' compiler
              * cache, which will speed up things once you have built things
@@ -237,10 +231,7 @@ def call(body)
                                 sh "ccache -M ${args.ccacheSize}"
                             }
 
-                            echo "Building AOSP"
                             sh "make showcommands -j${args.jobCpus}"
-
-                            echo "Building CTS"
                             sh "make showcommands -j${args.jobCpus} cts"
 
                             if (args.ctsTests.size() > 0) {
@@ -261,14 +252,13 @@ def call(body)
                             warnings (
                                 canComputeNew: true,
                                 canResolveRelativePaths: true,
-                                categoriesPattern: '',
                                 consoleParsers: [
-                                    [parserName: 'GNU C Compiler 4 (gcc)'],
                                     [parserName: 'Clang (LLVM based)'],
                                     [parserName: 'GNU Make + GNU C Compiler (gcc)'],
                                     [parserName: 'Java Compiler (javac)'],
                                     [parserName: 'JavaDoc Tool']
                                 ],
+                                categoriesPattern: '',
                                 defaultEncoding: '',
                                 excludePattern: '',
                                 healthy: '',
@@ -315,7 +305,12 @@ def call(body)
                                     awk '{print \$1}' >${WORKSPACE}/devices.txt
                                 """
                             }
-
+                            /*
+                             * `ANDROID_SERIAL` represents the serial number
+                             * to connect with. It is required for
+                             * *cts-tradefed* command to target the correct
+                             * device.
+                             */
                             android_serial = sh(script: 'cat devices.txt',
                                                 returnStdout: true).trim()
                             android_serial = "export ANDROID_SERIAL=${android_serial}"
@@ -394,7 +389,6 @@ def call(body)
                 sh "ls ${LOG_DIR}"
             }
             failure {
-                echo "Post Stages: failure"
                 script {
                     if (args.mailTo) {
                         mail (
@@ -410,12 +404,7 @@ def call(body)
     } /* END OF PIPELINE */
 }
 
-def sh(Map params = [:]) {
-    return steps.sh(params)
-}
-
 def tool(String type) {
-    // FIXME: Implement *repo* installer
     if (type == "repo") {
         sh """ mkdir -p "${WORKSPACE}/bin" """
         sh """ curl https://storage.googleapis.com/git-repo-downloads/repo > "${WORKSPACE}/bin/repo" """
