@@ -425,12 +425,15 @@ def tool(String type) {
     return steps.tool(type)
 }
 
-def kill(int pid) {
+def kill(String pid) {
     sh "ps -p ${pid} && kill -15 ${pid}"
     sleep 30
-    sh """ps -p ${pid} || exit 0
-          kill -9 ${pid}
-    """
-    sleep 5
-    sh "ps -p ${pid} && exit 1"
+    script {
+        def rc = sh script: "ps -p ${pid} || exit 0", returnStatus: true
+        if (rc != 0) {
+            sh "kill -9 ${pid}"
+            sleep 2
+            sh "ps -p ${pid} && exit 1"
+        }
+    }
 }
