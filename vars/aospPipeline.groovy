@@ -383,23 +383,11 @@ def call(body)
                 script {
                     if (logcatPid) {
                         echo "Killing logcat..."
-                        sh """
-                            if ps -p "${logcatPid}" >/dev/null 2>&1; then
-                                kill "${logcatPid}"
-                            fi
-                        """
-                    } else {
-                        /* Do nothing */
+                        kill(logcatPid)
                     }
                     if (emulatorPid) {
                         echo "Killing emulator..."
-                        sh """
-                            if ps -p "${emulatorPid}" >/dev/null 2>&1; then
-                                kill "${emulatorPid}"
-                            fi
-                        """
-                    } else {
-                        /* Do nothing */
+                        kill(emulatorPid)
                     }
                 }
                 echo "Log files:"
@@ -435,4 +423,14 @@ def tool(String type) {
         return "${WORKSPACE}/bin"
     }
     return steps.tool(type)
+}
+
+def kill(int pid) {
+    sh "ps -p ${pid} && kill -15 ${pid}"
+    sleep 30
+    sh """ps -p ${pid} || exit 0
+          kill -9 ${pid}
+    """
+    sleep 5
+    sh "ps -p ${pid} && exit 1"
 }
