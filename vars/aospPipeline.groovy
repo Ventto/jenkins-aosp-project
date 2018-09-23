@@ -331,13 +331,17 @@ def call(body)
                                 echo "Clear and capture logcat"
                                 aosp {
                                     sh "adb logcat -c"
-                                    sh("""{ nohup adb logcat & } \
-                                            > "${LOG_LOGCAT}" 2>"${ERR_LOGCAT}"
-                                        echo "\$!" > ${WORKSPACE}/logcat.pid
-                                    """)
+                                    withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
+                                        sh("""{ nohup adb logcat & } \
+                                                > "${LOG_LOGCAT}" 2>"${ERR_LOGCAT}"
+                                            echo "\$!" > ${WORKSPACE}/logcat.pid
+                                        """)
+                                    }
                                 }
                                 logcatPid = sh(script: "ps -p ${logcatPid}",
                                                returnStdout: true).trim()
+                                sleep 3
+                                sh "ps -p '${logcatPid}'"
                             }
                         } /* EMULATOR */
                         if (args.ctsTests.size() > 0) {
