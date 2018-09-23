@@ -179,7 +179,18 @@ def call(body)
         }
 
         environment {
-            /* AOSP wrapper */
+            /*
+             * The AOSP wrapper's syntax:
+             *  ```
+             *      aosp {        |      aosp('aosp/', 'aosp_x86_64-eng') {
+             *         ...        |         ...
+             *      }             |      }
+             *  ```
+             * This wrapper enables to call any command within an AOSP setup
+             * environment regarding the target build (ex: aosp_x86_64-eng).
+             * The `AOSP_ROOT` and `AOSP_TARGET_BUILD` are required if calling
+             * the wrapper without arguments.
+             */
             AOSP_ROOT         = "${args.aospDir}"
             AOSP_TARGET_BUILD = "${args.targetProduct}-${args.buildVariant}"
 
@@ -274,7 +285,7 @@ def call(body)
                 when { expression { ! skipStages.unittests } }
                 steps {
                     /*
-                     * FIXME: Only one Android emulator process can run on the slave.
+                     * Caution: Only one Android emulator process can run on the slave.
                      * Waiting-for-boot step is waiting for the OS to completely boot
                      * on a a given emulator. If it is already done for a second
                      * process then the stage will run as long as that process is
