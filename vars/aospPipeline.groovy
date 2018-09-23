@@ -360,6 +360,7 @@ def call(body)
                                     """
                                 }
                             }
+                            archive_cts_results()
                         }
                     } /* SCRIPT */
                 } /* STEPS */
@@ -396,6 +397,16 @@ def call(body)
                         kill(emulatorPid)
                     }
                 }
+                //archive_cts_results()
+
+                publishHTML target: [
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: false,
+                    keepAll: true,
+                    reportDir: "${WORKSPACE}/cts/build-${BUILD_NUMBER}/results",
+                    reportFiles: "./*/test.html,./*/compatibility_result.css",
+                    reportName: 'CTS Results'
+                ]
                 echo "Log files:"
                 sh "ls ${LOG_DIR}"
             }
@@ -423,6 +434,29 @@ def tool(String type) {
         return "${WORKSPACE}/bin"
     }
     return steps.tool(type)
+}
+
+def archive_cts_results() {
+    sh "mkdir -p ${WORKSPACE}/cts/build-${BUILD_NUMBER}"
+    aosp {
+        sh """ cp -r "\${ANDROID_HOST_OUT}/cts/android-cts/results" \
+                  "${WORKSPACE}/cts/build-${BUILD_NUMBER}"
+        """
+    }
+}
+
+def get_cts_results() {
+    aosp {
+        sh script: """
+            ls -1t "\${ANDROID_HOST_OUT}/cts/android-cts/results" \
+                | head -n2 | tail -n1 > ${WORKSPACE}/cts-dir.txt
+        """
+    }
+    script {
+        def cts_dir = sh (script: "cat cts-dir.txt", returnStdout: true).trim()
+
+        return "\${ANDROID_HOST_OUT}/cts/android-cts/results/${cts_dir}/test_result.xml"
+    }
 }
 
 def kill(String pid) {
