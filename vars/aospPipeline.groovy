@@ -154,26 +154,8 @@ def call(body)
     //          Variables
     // ============================
 
-    def lastStageName = ""
-
-    // TODO: Call the following shell command line before each sh step
-    def SETENV       = """
-        set +x
-        { . build/envsetup.sh && \
-          lunch ${args.targetProduct}-${args.buildVariant}
-        } >/dev/null 2>&1 || exit 1
-        echo "Sourcing Android environment..."
-        set -x
-    """
-
     // The ccache binary is either for `linux-86` or `darwin-x86`
     def CCACHE_BIN = "prebuilts/misc/linux-x86/ccache/ccache"
-
-    /*
-     * The `ANDROID_HOST_OUT` variable is getting a value after
-     * running "${SETENV}" Shell script before using ${ADB_BIN}.
-     */
-    def ADB_BIN = "\${ANDROID_HOST_OUT}/bin/adb"
 
     /*
      * Initialize properties, avoiding to get
@@ -250,24 +232,21 @@ def call(body)
                 when { expression { ! skipStages.build } }
                 steps {
                     script {
-                        if (args.ccacheEnabled) {
-                            dir(args.aospDir) {
-                                sh "${CCACHE_BIN} -M ${args.ccacheSize}"
+                        aosp {
+                            if (args.ccacheEnabled) {
+                                sh "ccache -M ${args.ccacheSize}"
                             }
-                        }
-                    }
-                    script {
-                        dir(args.aospDir) {
+
                             echo "Building AOSP"
-                            sh "${SETENV} make showcommands -j${args.jobCpus}"
+                            sh "make showcommands -j${args.jobCpus}"
 
                             echo "Building CTS"
-                            sh "${SETENV} make showcommands -j${args.jobCpus} cts"
+                            sh "make showcommands -j${args.jobCpus} cts"
 
                             if (args.ctsTests.size() > 0) {
                                 echo "Building CTS: ${it}"
                                 args.ctsTests.each {
-                                    sh "${SETENV} make showcommands -j${args.jobCpus} ${it}"
+                                    sh "make showcommands -j${args.jobCpus} ${it}"
                                 }
                             }
                         }
@@ -312,48 +291,61 @@ def call(body)
                      * running.
                      */
                     script {
+                        def android_serial = ""
                         if (args.emulatorEnabled) {
-                            dir(args.aospDir) {
-                                sh "${SETENV} adb start-server"
-
-                                echo "Starting emulator..."
+                            aosp {
+                                sh "adb start-server"
                                 withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
-                                    emulatorPid = steps.sh(returnStdout: true, script: """
-                                    { ${SETENV}
-                                      nohup emulator ${args.emulatorOpts} &
-                                    } > "${LOG_EMULATOR}" 2>"${ERR_EMULATOR}"
-                                    echo "\$!" """).trim()
-                                }
-
-                                sh "ps -p '${emulatorPid}'"
-
-                                echo "Waiting for OS to completely boot..."
-
-                                timeout(5) {
-                                    sh "${SETENV} adb -e wait-for-device shell getprop init.svc.bootanim"
-                                }
-
-                                echo "Clear and capture logcat"
-
-                                if (args.logcatEnabled) {
-                                    sh "${SETENV} adb logcat -c"
-                                    logcatPid = sh(returnStdout: true, script: """
-                                        { ${SETENV}
-                                          nohup adb logcat & } \
-                                            > "${LOG_LOGCAT}" 2>"${ERR_LOGCAT}" &
-                                        echo "\$!"
-                                    """).trim()
-                                    sh "ps -p ${logcatPid}"
+                                    sh("""
+                                        { nohup emulator ${args.emulatorOpts} & } \
+                                          > "${LOG_EMULATOR}" 2>"${ERR_EMULATOR}"
+                                        echo "\$!" >${WORKSPACE}/emulator.pid
+                                    """)
                                 }
                             }
+
+                            emulatorPid = sh(script: "cat emulator.pid",
+                                             returnStdout: true).trim()
+                            sleep 3
+                            sh "ps -p '${emulatorPid}'"
+                            aosp {
+                                sh "adb devices"
+                                sh """
+                                    adb devices | tail -n +2 | \
+                                    awk '{print \$1}' >${WORKSPACE}/devices.txt
+                                """
+                            }
+
+                            android_serial = sh(script: 'cat devices.txt',
+                                                returnStdout: true).trim()
+                            android_serial = "export ANDROID_SERIAL=${android_serial}"
+
+                            echo "Waiting for OS to completely boot..."
+                            aosp {
+                                timeout(5) {
+                                    sh "adb -e wait-for-device shell getprop init.svc.bootanim"
+                                }
+                            }
+
+                            if (args.logcatEnabled) {
+                                echo "Clear and capture logcat"
+                                aosp {
+                                    sh "adb logcat -c"
+                                    sh("""{ nohup adb logcat & } \
+                                            > "${LOG_LOGCAT}" 2>"${ERR_LOGCAT}"
+                                        echo "\$!" > ${WORKSPACE}/logcat.pid
+                                    """)
+                                }
+                                logcatPid = sh(script: "ps -p ${logcatPid}",
+                                               returnStdout: true).trim()
+                            }
                         } /* EMULATOR */
-                        dir(args.aospDir) {
-                            if (args.ctsTests.size() > 0) {
+                        if (args.ctsTests.size() > 0) {
+                            aosp {
                                 args.ctsTests.each {
                                     echo "Running CTS: ${it}"
                                     sh """
-                                        ${SETENV}
-                                        export ANDROID_SERIAL='emulator-5566'
+                                        ${android_serial}
                                         cts-tradefed run commandAndExit cts -m ${it}
                                     """
                                 }

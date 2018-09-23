@@ -26,7 +26,7 @@ def sh(Map params = [:])
     if (lunch) {
         script = """
         set +x
-        { . build/envsetup.sh && lunch ${env.AOSP_TARGET_BUILD}; } || exit 1
+        { . build/envsetup.sh && lunch ${env.AOSP_TARGET_BUILD}; }
         set -x
         ${script}
         """
