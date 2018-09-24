@@ -57,7 +57,6 @@
  * - aospDir         | String       | "aosp"
  * - repoBranch      | String       | Empty
  * - jobCpus         | Integer      | 0
- * - doClean         | Boolean      | false
  * - ccacheEnabled   | Boolean      | false
  * - ccacheSize      | String       | "50G"
  * - logcatEnabled   | Boolean      | false
@@ -83,7 +82,6 @@
  * - unittests   | Boolean | If true, skips 'Unit Testing' step
  * - statictests | Boolean | If true, skips 'Static Analysis' step
  * - sonar       | Boolean | If true, skips 'Sonar' step
- * - artefact    | Boolean | If true, skips 'Artefacts' step
  */
 def call(body)
 {
@@ -116,7 +114,6 @@ def call(body)
     args.aospDir = (args.aospDir) ? args.aospDir : "aosp"
     args.repoBranch = (args.repoBranch) ? "-b ${args.repoBranch}" : ""
     args.jobCpus = (args.jobCpus) ? args.jobCpus : 0
-    args.doClean = (args.doClean) ? args.doClean : 0
     args.ccacheEnabled = (args.ccacheEnabled) ? args.ccacheEnabled : false
     args.ccacheSize = (args.ccacheSize) ? args.ccacheSize : "50G"
     args.logcatEnabled = (args.logcatEnabled) ? args.logcatEnabled : false
@@ -142,7 +139,6 @@ def call(body)
         unittests    : false,
         statictests  : false,
         sonarqube    : false,
-        artefacts    : false,
     ]
 
     skipStages = (args.skipStages) ? args.skipStages : skipStages
@@ -211,7 +207,6 @@ def call(body)
         stages {
             stage('Pre Actions') {
                 steps {
-                    script { if (args.doClean) { cleanWs() } }
                     sh """ mkdir -p "${LOG_DIR}" "${args.aospDir}" """
                 }
             }
@@ -350,6 +345,7 @@ def call(body)
                                 sh "ps -p '${logcatPid}'"
                             }
                         } /* EMULATOR */
+
                         if (args.ctsTests.size() > 0) {
                             aosp {
                                 args.ctsTests.each {
@@ -360,7 +356,8 @@ def call(body)
                                     """
                                 }
                             }
-                            archive_cts_results()
+                            store_cts_results()
+                            archiveArtifacts "cts/build-${BUILD_NUMBER}/results/*.zip"
                         }
                     } /* SCRIPT */
                 } /* STEPS */
@@ -368,7 +365,6 @@ def call(body)
             stage('Sonarqube') {
                 when { expression { ! skipStages.sonarqube } }
                 steps {
-                    echo 'Sonar !'
                     script {
                         /*
                          * Normally downloaded during the first stage, that
@@ -397,18 +393,18 @@ def call(body)
                         kill(emulatorPid)
                     }
                 }
-                //archive_cts_results()
-
+                echo "Log files:"
+                sh "ls ${LOG_DIR}"
+            }
+            success {
                 publishHTML target: [
                     allowMissing: false,
                     alwaysLinkToLastBuild: false,
                     keepAll: true,
-                    reportDir: "${WORKSPACE}/cts/build-${BUILD_NUMBER}/results",
-                    reportFiles: "./*/test.html,./*/compatibility_result.css",
+                    reportDir: "cts/build-${BUILD_NUMBER}/results",
+                    reportFiles: "./*/test_result.xml",
                     reportName: 'CTS Results'
                 ]
-                echo "Log files:"
-                sh "ls ${LOG_DIR}"
             }
             failure {
                 script {
@@ -436,26 +432,12 @@ def tool(String type) {
     return steps.tool(type)
 }
 
-def archive_cts_results() {
+def store_cts_results() {
     sh "mkdir -p ${WORKSPACE}/cts/build-${BUILD_NUMBER}"
     aosp {
-        sh """ cp -r "\${ANDROID_HOST_OUT}/cts/android-cts/results" \
+        sh """ mv "\${ANDROID_HOST_OUT}/cts/android-cts/results" \
                   "${WORKSPACE}/cts/build-${BUILD_NUMBER}"
         """
-    }
-}
-
-def get_cts_results() {
-    aosp {
-        sh script: """
-            ls -1t "\${ANDROID_HOST_OUT}/cts/android-cts/results" \
-                | head -n2 | tail -n1 > ${WORKSPACE}/cts-dir.txt
-        """
-    }
-    script {
-        def cts_dir = sh (script: "cat cts-dir.txt", returnStdout: true).trim()
-
-        return "\${ANDROID_HOST_OUT}/cts/android-cts/results/${cts_dir}/test_result.xml"
     }
 }
 
