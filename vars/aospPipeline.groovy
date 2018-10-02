@@ -78,10 +78,9 @@
  * ---------------------------------------------------------------------------
  * - scm         | Boolean | If true, skips 'SCM' step
  * - build       | Boolean | If true, skips 'Build' step
- * - emulator    | Boolean | If true, skips 'Emulator' step
- * - unittests   | Boolean | If true, skips 'Unit Testing' step
  * - statictests | Boolean | If true, skips 'Static Analysis' step
- * - sonar       | Boolean | If true, skips 'Sonar' step
+ * - cts         | Boolean | If true, skips 'CTS' step
+ * - sonarqube   | Boolean | If true, skips 'Sonarqube' step
  */
 def call(body)
 {
@@ -135,9 +134,8 @@ def call(body)
     def skipStages = [
         scm          : false,
         build        : false,
-        emulator     : false,
-        unittests    : false,
         statictests  : false,
+        cts          : false,
         sonarqube    : false,
     ]
 
@@ -276,8 +274,8 @@ def call(body)
                     )
                 }
             }
-            stage('Tests') {
-                when { expression { ! skipStages.unittests } }
+            stage('CTS') {
+                when { expression { ! skipStages.cts } }
                 steps {
                     /*
                      * Caution: Only one Android emulator process can run on the slave.
