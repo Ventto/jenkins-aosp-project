@@ -356,6 +356,14 @@ def call(body)
                             }
                             store_cts_results()
                             archiveArtifacts "cts/build-${BUILD_NUMBER}/results/*.zip"
+                            publishHTML target: [
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: false,
+                                keepAll: true,
+                                reportDir: "cts/build-${BUILD_NUMBER}/results",
+                                reportFiles: "./*/test_result.xml",
+                                reportName: 'CTS Results'
+                            ]
                         }
                     } /* SCRIPT */
                 } /* STEPS */
@@ -393,16 +401,6 @@ def call(body)
                 }
                 echo "Log files:"
                 sh "ls ${LOG_DIR}"
-            }
-            success {
-                publishHTML target: [
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: false,
-                    keepAll: true,
-                    reportDir: "cts/build-${BUILD_NUMBER}/results",
-                    reportFiles: "./*/test_result.xml",
-                    reportName: 'CTS Results'
-                ]
             }
             failure {
                 script {
