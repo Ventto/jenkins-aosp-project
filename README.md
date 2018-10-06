@@ -1,6 +1,8 @@
 Jenkins Pipeline for AOSP
 =========================
 
+[![Powered By Jenkins](https://img.shields.io/badge/powered_by-Jenkins-brightgreen.svg)](https://jenkins.io/)
+
 *"This repository is a [Jenkins shared library](https://jenkins.io/doc/book/pipeline/shared-libraries/#dynamic-retrieval)"*
 
 # Requirements
