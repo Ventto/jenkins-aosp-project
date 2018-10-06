@@ -88,7 +88,8 @@ to execute the pipeline on a specific agent/node.
 
 For more details about arguments and options, look at the:
 
-* [Sources](./vars/aospPipeline.groovy)
+* [Pipeline sources](./vars/aospPipeline.groovy)
+* [AOSP wrapper sources](./vars/aosp.groovy) or its [documentation](./AOSP_WRAPPER.md)
 * [Jenkinsfile as example](./samples/Jenkinsfile)
 
 # Advanced
